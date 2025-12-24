@@ -1,0 +1,146 @@
+// Prisma Schema for Money Manager App
+// Generated from docs/constitution.md and docs/specs/*.md
+// Database: PostgreSQL
+// Financial Rules: Decimal(14,2) for all money amounts (never float)
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+
+// Enums
+enum AccountType {
+  CASH
+  BANK
+  WALLET
+  CREDIT_CARD
+}
+
+enum TransactionType {
+  INCOME
+  EXPENSE
+  TRANSFER
+}
+
+enum CategoryType {
+  INCOME
+  EXPENSE
+}
+
+// User entity (specs: 02-auth.md, 03-users.md)
+model User {
+  id                  String   @id @default(uuid())
+  email               String   @unique
+  password            String
+  hashedRefreshToken  String?
+  name                String?
+  defaultCurrency     String?
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+
+  // Relations
+  accounts      Account[]
+  categories    Category[]
+  transactions  Transaction[]
+  budgets       Budget[]
+
+  @@index([email])
+}
+
+// Account entity (spec: 04-accounts.md)
+model Account {
+  id             String      @id @default(uuid())
+  userId         String
+  name           String
+  type           AccountType
+  currency       String
+  openingBalance Decimal     @db.Decimal(14, 2)
+  createdAt      DateTime    @default(now())
+  updatedAt      DateTime    @updatedAt
+  isDeleted      Boolean     @default(false)
+
+  // Relations
+  user         User          @relation(fields: [userId], references: [id])
+  transactions Transaction[]
+
+  @@index([userId])
+  @@index([userId, isDeleted])
+}
+
+// Category entity (spec: 07-categories.md)
+// Supports system categories (shared) and user categories (per-user)
+model Category {
+  id        String       @id @default(uuid())
+  userId    String?      // Nullable for system categories
+  name      String
+  type      CategoryType
+  isSystem  Boolean      @default(false)  // true for system categories
+  createdAt DateTime     @default(now())
+  updatedAt DateTime     @updatedAt
+  isDeleted Boolean      @default(false)
+
+  // Relations
+  user         User?         @relation(fields: [userId], references: [id])  // Optional for system categories
+  transactions Transaction[]
+  budgets      Budget[]
+
+  @@index([userId])
+  @@index([userId, type])
+  @@index([isSystem])
+  @@index([isSystem, type])
+  @@unique([userId, name, type, isDeleted])  // Uniqueness constraint
+}
+
+// Transaction entity (spec: 05-transactions.md)
+model Transaction {
+  id                    String          @id @default(uuid())
+  userId                String
+  accountId             String
+  categoryId            String?         // Nullable for TRANSFER transactions
+  type                  TransactionType
+  amount                Decimal         @db.Decimal(14, 2)
+  note                  String?
+  transactionDate       DateTime
+  linkedTransactionId   String?         @unique
+  createdAt             DateTime        @default(now())
+  updatedAt             DateTime        @updatedAt
+  isDeleted             Boolean         @default(false)
+
+  // Relations
+  user                  User         @relation(fields: [userId], references: [id])
+  account               Account      @relation(fields: [accountId], references: [id])
+  category              Category?    @relation(fields: [categoryId], references: [id])
+  linkedTransaction     Transaction? @relation("TransferLink", fields: [linkedTransactionId], references: [id])
+  reverseLinkedTransaction Transaction? @relation("TransferLink")
+
+  @@index([userId])
+  @@index([userId, transactionDate])
+  @@index([userId, accountId, transactionDate])
+  @@index([userId, categoryId, transactionDate])
+  @@index([userId, type, transactionDate])
+  @@index([linkedTransactionId])
+}
+
+// Budget entity (spec: 06-budgets.md)
+model Budget {
+  id         String   @id @default(uuid())
+  userId     String
+  categoryId String
+  amount     Decimal  @db.Decimal(14, 2)
+  month      String
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+  isDeleted  Boolean  @default(false)
+
+  // Relations
+  user     User     @relation(fields: [userId], references: [id])
+  category Category @relation(fields: [categoryId], references: [id])
+
+  @@unique([userId, categoryId, month])
+  @@index([userId])
+  @@index([userId, month])
+}

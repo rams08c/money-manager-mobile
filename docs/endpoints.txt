@@ -1,0 +1,111 @@
+================================================================================
+MONEY MANAGER API ENDPOINTS
+================================================================================
+Generated: 2025-12-20
+Backend Framework: NestJS
+Base URL: /api (assumed)
+Authentication: JWT (Access + Refresh tokens)
+================================================================================
+
+DOMAIN ENTITIES REQUIRING PERSISTENCE:
+--------------------------------------
+1. User - Authentication and user profile
+2. Account - Financial accounts (Cash, Bank, Wallet, Credit Card)
+3. Category - Transaction categories (Income/Expense)
+4. Transaction - Financial transactions (Income, Expense, Transfer)
+5. Budget - Monthly category budgets
+
+================================================================================
+API ENDPOINTS (Total: 27)
+================================================================================
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│ AUTHENTICATION (/auth)                                                      │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+POST   /auth/register          Register new user
+POST   /auth/login             User login
+POST   /auth/refresh           Refresh access token
+POST   /auth/logout            User logout
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│ USERS (/users)                                                              │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+GET    /users/me               Get current user profile
+PUT    /users/me               Update current user profile
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│ ACCOUNTS (/accounts)                                                        │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+POST   /accounts               Create new account
+GET    /accounts               Get all user accounts
+GET    /accounts/:id           Get specific account
+PUT    /accounts/:id           Update account
+DELETE /accounts/:id           Delete account (soft delete)
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│ TRANSACTIONS (/transactions)                                                │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+POST   /transactions           Create new transaction
+POST   /transactions/transfer  Create transfer between accounts
+GET    /transactions           Get all user transactions
+GET    /transactions/:id       Get specific transaction
+PUT    /transactions/:id       Update transaction
+DELETE /transactions/:id       Delete transaction (soft delete)
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│ BUDGETS (/budgets)                                                          │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+POST   /budgets                Create new budget
+GET    /budgets                Get all budgets
+       Query params: ?month=YYYY-MM (optional)
+GET    /budgets/:id            Get specific budget
+PUT    /budgets/:id            Update budget
+DELETE /budgets/:id            Delete budget (soft delete)
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│ REPORTS (/reports)                                                          │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+GET    /reports/monthly        Get monthly summary
+       Query params: ?month=YYYY-MM&accountId=uuid
+GET    /reports/categories     Get category breakdown
+       Query params: ?startDate&endDate&type&categoryId
+GET    /reports/budget-vs-actual   Get budget vs actual spending
+       Query params: ?month=YYYY-MM
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│ SYNC (/sync)                                                                │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+POST   /sync                   Sync offline data
+GET    /sync/time              Get server time
+
+================================================================================
+NOTES:
+================================================================================
+
+1. All endpoints except /auth/register and /auth/login require JWT authentication
+2. UserId is derived from JWT token, never accepted from client
+3. All DELETE operations are soft deletes (isDeleted flag)
+4. All monetary amounts use Decimal(14,2) - never floating point
+5. All endpoints follow REST conventions
+6. Error responses are typed and explicit
+7. All financial writes are atomic and deterministic
+
+================================================================================
+SECURITY:
+================================================================================
+
+- Zero trust model
+- All APIs require authentication (except register/login)
+- User isolation is mandatory
+- No sensitive data in logs
+- Tokens stored securely on device
+- Rate limiting enabled
+
+================================================================================
